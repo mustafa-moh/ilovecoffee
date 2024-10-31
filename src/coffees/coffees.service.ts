@@ -2,7 +2,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
-  NotFoundException,
+  // NotFoundException,
 } from '@nestjs/common';
 import { Coffee } from './entities/coffee.entity';
 
@@ -31,6 +31,11 @@ export class CoffeesService {
 
   create(coffeeDto: any) {
     this.coffees.push(coffeeDto);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  update(id: string, coffeeDto: any) {
+    // update
   }
 
   remove(id: string) {
