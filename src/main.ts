@@ -9,6 +9,9 @@ async function bootstrap() {
       whitelist: true, // like validated in laravel
       //forbidNonWhitelisted: true, // crash when submit extra attributes not in the DTO class
       transform: true, // to cast the passed data as well not validating it only
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
     }),
   );
   await app.listen(process.env.PORT ?? 3000);
