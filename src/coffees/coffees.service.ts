@@ -7,22 +7,29 @@ import {
 } from '@nestjs/common';
 import { Coffee } from './entities/coffee.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { CreatCoffeeDto } from './dto/creat-coffee.dto/creat-coffee.dto';
 import { UpdateCoffeeDto } from './dto/creat-coffee.dto/update-coffee.dto';
+import { Flavor } from './entities/flavor.entity';
 
 @Injectable()
 export class CoffeesService {
   constructor(
     @InjectRepository(Coffee) private readonly repo: Repository<Coffee>,
-  ) {}
+    @InjectRepository(Flavor) private readonly flavorRepo: Repository<Flavor>,
+  ) {
+    // repo = datasource.getRepository(Coffee)
+  }
 
   findAll() {
-    return this.repo.find();
+    return this.repo.find({ relations: { flavors: true } });
   }
 
   async findOne(id: string) {
-    const coffee = await this.repo.findOne({ where: { id: +id } });
+    const coffee = await this.repo.findOne({
+      where: { id: +id },
+      relations: { flavors: true },
+    });
     if (!coffee) {
       throw new HttpException(`item not found`, HttpStatus.NOT_FOUND);
       //throw new NotFoundException(`item not found`);
@@ -31,15 +38,23 @@ export class CoffeesService {
     return coffee;
   }
 
-  create(coffeeDto: CreatCoffeeDto) {
-    const coffee = this.repo.create(coffeeDto);
+  async create(coffeeDto: CreatCoffeeDto) {
+    const flavors = await Promise.all(
+      coffeeDto.flavors.map((name) => this.preloadFlavors(name)),
+    );
+
+    const coffee = this.repo.create({ ...coffeeDto, flavors });
 
     return this.repo.save(coffee);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async update(id: string, coffeeDto: UpdateCoffeeDto) {
-    const coffee = await this.repo.preload({ id: +id, ...coffeeDto });
+    const flavors = await Promise.all(
+      coffeeDto.flavors.map((name) => this.preloadFlavors(name)),
+    );
+
+    const coffee = await this.repo.preload({ id: +id, ...coffeeDto, flavors });
 
     if (!coffee) {
       throw new NotFoundException(`coffee #${id} not found`);
@@ -51,5 +66,14 @@ export class CoffeesService {
   async remove(id: string) {
     const coffe = await this.findOne(id);
     return this.repo.remove(coffe);
+  }
+
+  async preloadFlavors(name: string): Promise<Flavor> {
+    const flavor = await this.flavorRepo.findOneBy({ name });
+    if (flavor) {
+      return flavor;
+    }
+
+    return this.flavorRepo.create({ name });
   }
 }
